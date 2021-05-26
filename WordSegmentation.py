@@ -1,18 +1,18 @@
-#import wordninja
+# import wordninja
+from nltk.corpus import wordnet
 
+textwords = open("test.txt").read()
+newwords = list()
+print(textwords)
 
-words = open("test.txt").read()
-newwords=list()
-print(words)
-
-#print(maxword)
-#print(wordninja.split("thelongestlistofthelongeststuffatthelongestdomainnameatlonglast.com"))
-str=""
-for i in words:
-    str=str+i
+# print(maxword)
+# print(wordninja.split("thelongestlistofthelongeststuffatthelongestdomainnameatlonglast.com"))
+str = ""
+for i in textwords:
+    str = str + i
     print(str)
-    if len(str)!=1 & str.isalpha():
-        newwords.append(str)
-        str='\0'
 
+    if wordnet.synsets(str):
+        newwords.append(str)
+        str = ''
 print(newwords)
