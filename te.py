@@ -13,6 +13,7 @@ class ProbDist(dict):
 
         for k, c in data.items():
             self[k] = self.get(k, 0) + c
+            #print(self[k])
 
         if unigram:
             self.unknownprob = lambda k, N: 10/(N*10**len(k))    # avoid unknown long word
@@ -26,6 +27,7 @@ class ProbDist(dict):
             return self[key]/self.N
         else:
             return self.unknownprob(key, self.N)
+
 
 
 P_unigram = ProbDist('unigram.txt')
