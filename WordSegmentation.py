@@ -1,32 +1,14 @@
-import functools
 import math
+import functools
+import sys
 
-# ############################ class pdis ##################################
-class Pdist(dict):
-    # probability distribution estimated from counts in datafile
-    # N = 1024908267229 ## Number of tokens in corpus
-    def __init__(self, dictionary, N=None, missingfn=None):
-        for key, frequency in dictionary.items():
-            # print(self.get(key, 0))
-            self[key] = self.get(key, 0) + float(frequency)
-            self.N = float(N or sum(self.itervalues()))
-            self.missingfn = missingfn or (lambda k, N: 1. / N)
-
-    def __call__(self, key):
-        if key in self:
-            return self[key] / self.N
-        else:
-            return self.missingfn(key, self.N)
-
-
-def avoid_long_words(word, N):
-    "Estimate the probability of an unknown word."
-    return 10. / (N * 10 ** len(word))
-
+# sys.setrecursionlimit(10000)
+# ##############################################################
+# this code implements this paper http://norvig.com/ngrams/ch14.pdf and all numbers taken from it
 
 # ############################ Unigram #####################################
 """
- File count_1w.txt is taken from http://norvig.com/ngrams/count_1w.txt that represents frequency of  common unigram words
+ File count_1w.txt is taken from http://norvig.com/ngrams/count_1w.txt that represents frequency of common unigram words
 """
 unigrams = dict()
 
@@ -34,7 +16,6 @@ file = open("count_1w.txt", "r")
 lines = file.readlines()
 for line in lines:
     if line != "\n" or line != '':
-        k, v = line.rstrip().split('\t')
         line = line.partition('\t')
         str = line[2].partition("\n")
         unigrams[line[0]] = float(str[0])
@@ -42,11 +23,12 @@ for line in lines:
 file.close()
 # print(unigrams)
 N = 1024908267229  ## Number of tokens in corpus
-pdis_unigrams = Pdist(unigrams, N, avoid_long_words)
-
+unigram_probability = dict()
+for word, frequency in unigrams.items():
+    unigram_probability[word] = frequency / N
 # ############################ bigram #####################################
 """
- File count_2w.txt is taken from http://norvig.com/ngrams/count_2w.txt that represents frequency of  common bigram words
+ File count_2w.txt is taken from http://norvig.com/ngrams/count_2w.txt that represents frequency of common bigram words
 """
 bigrams = dict()
 file = open("count_2w.txt", "r")
@@ -58,51 +40,69 @@ for line in lines:
         bigrams[line[0]] = float(str[0])
 file.close()
 N = 1024908267229  ## Number of tokens in corpus
-pdis_bigrams = Pdist(bigrams, N, avoid_long_words)
+bigram_probability = dict()
+for word, frequency in bigrams.items():
+    bigram_probability[word] = frequency / N
 
 
 # print(bigrams)
 
 
-# ########################### Conditional probability #####################################
+# ########################### Unigram and Bigram probability #####################################
 
-def conitionalprobablity(word, prev):
+def UniBiprob(word, prev):
     try:
-        return pdis_bigrams[prev + ' ' + word] / float(pdis_unigrams[prev])
+        return bigram_probability[prev + ' ' + word] / float(unigram_probability[prev])
     except KeyError:
-        return pdis_bigrams(word)
+        if word in unigram_probability:
+            return unigram_probability[word]
+        else:
+            return 10. / (N * 10 ** len(word))
 
 
 # ####################### cost #################################
-def cost(string, prev='<S>'):
-    if string == "" or not string:
-        return 0.0, []
-    return math.log10(conitionalprobablity(string, prev))
+def cost(string, prev):
+    if str == "" or not str:
+        return 0.0
+    return math.log10(UniBiprob(string, prev))
 
 
-# ##################### using viterbi algorithm ##########################################
-@functools.lru_cache(maxsize=2 ** 10)
+# ##################### spacing using viterbi algorithm ##########################################
+@functools.lru_cache(maxsize=None)
 def spacing(str, remainstr='<S>'):
     L = 20
-    if str == "":
+    if str == "" or not str:
         return 0.0, []
-    else:
-        length = min(L, len(str))
-        list1 = []
-        for i in range(length):
-            list1.append((str[0:i + 1], str[i + 1:len(str)]))
-        # print(list1)
-        candidates = []
-        for left, right in list1:
-            coststr = cost(left,remainstr)
-            costright, right = spacing(right, left)
+    list1 = []
+    length = min(L, len(str))
+    for i in range(length):
+        list1.append((str[0:i + 1], str[i + 1:len(str)]))
+    # print(list1)
+    candidates = []
+    for left, right in list1:
+        coststr = cost(left, remainstr)
+        costright, right = spacing(right, left)
 
-            candidates.append((coststr + costright, [left] + right))
+        candidates.append((coststr + costright, [left] + right))
 
-        return max(candidates)
+    return max(candidates)
 
-text = open("test.txt").read()
-result = list(spacing(text))
-result.remove(result.__getitem__(0))
-for items in result:
-    print(*items)
+# ##################### remove first element (cost) and calculate accuracy ##########################################
+
+def slice_result(original,string):
+    result = list(spacing(string))
+    result.remove(result.__getitem__(0))
+    print("The Output List : ",*result)
+    listresult=result[0]
+    list_difference = []
+
+    for item in original:
+        if item not in listresult:
+            #print(item)
+            list_difference.append(item)
+
+    return (len(original)-len(list_difference))*100/len(original)
+# ##################### calling function ##########################################
+#text = open("test.txt").read()
+#slice_result(text)
+#slice_result("faroutintheunchartedbackwatersoftheunfashionableendofthewesternspiralarmofthegalaxyliesasmallunregardedyellowsun")
