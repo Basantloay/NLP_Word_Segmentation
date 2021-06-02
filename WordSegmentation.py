@@ -1,10 +1,8 @@
 import math
 import functools
-import sys
 
-# sys.setrecursionlimit(10000)
 # ##############################################################
-# this code implements this paper http://norvig.com/ngrams/ch14.pdf and all numbers taken from it
+# all numbers and constants taken from http://norvig.com/ngrams/ch14.pdf
 
 # ############################ Unigram #####################################
 """
@@ -48,9 +46,9 @@ for word, frequency in bigrams.items():
 # print(bigrams)
 
 
-# ########################### Unigram and Bigram probability #####################################
+# ########################### Unigram and Bigram probability (conditional probability) #################################
 
-def UniBiprob(word, prev):
+def UniBigramprob(word, prev):
     try:
         return bigram_probability[prev + ' ' + word] / float(unigram_probability[prev])
     except KeyError:
@@ -64,7 +62,7 @@ def UniBiprob(word, prev):
 def cost(string, prev):
     if str == "" or not str:
         return 0.0
-    return math.log10(UniBiprob(string, prev))
+    return math.log10(UniBigramprob(string, prev))
 
 
 # ##################### spacing using viterbi algorithm ##########################################
@@ -101,7 +99,8 @@ def slice_result(original,string):
             #print(item)
             list_difference.append(item)
 
-    return (len(original)-len(list_difference))*100/len(original)
+    return (len(original)-len(list_difference))*100/len(original),listresult
+
 # ##################### calling function ##########################################
 #text = open("test.txt").read()
 #slice_result(text)
